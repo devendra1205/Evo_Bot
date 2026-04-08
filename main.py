@@ -9,6 +9,8 @@ from utils.chats import load_data, save_data
 load_dotenv()  # Load .env file
 
 TOKEN = os.getenv("BOT_TOKEN")  # Load from .env
+WEBHOOK_URL = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
+PORT = int(os.getenv("PORT", "10000"))
 
 # Load JSON once
 data = load_data()
@@ -55,33 +57,37 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     save_data(data)
 
+def build_app():
+    app = ApplicationBuilder().token(TOKEN).build()
 
-app = ApplicationBuilder().token(TOKEN).build()
+    app.add_handler(CommandHandler("help", help))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("game", unknown_command))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-app.add_handler(CommandHandler("help", help))
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("game", unknown_command))
+    return app
 
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-app.run_polling()
+def main():
+    if not TOKEN:
+        raise ValueError("BOT_TOKEN is missing in .env")
 
-    # if "hello" in user_text:
-    #     await update.message.reply_text("Hello detective.")
-    # elif "who are you" in user_text:
-    #     await update.message.reply_text("I… I didn't do anything 😰")
-    # else:
-    #     await update.message.reply_text("I don't understand...")
+    if not WEBHOOK_URL:
+        raise ValueError("WEBHOOK_URL or RENDER_EXTERNAL_URL is missing in .env")
 
-app = ApplicationBuilder().token(TOKEN).build()
+    app = build_app()
+    webhook_full_url = f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}"
 
-app.add_handler(CommandHandler("help", help))
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("game", unknown_command))
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=TOKEN,
+        webhook_url=webhook_full_url,
+    )
 
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-app.run_polling()
+if __name__ == "__main__":
+    main()
 
 
 
