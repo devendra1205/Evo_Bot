@@ -1,0 +1,15 @@
+import os
+from groq import Groq
+
+# Set your API key as an environment variable or pass it directly
+client = Groq()
+
+chat_completion = client.chat.completions.create(
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": "Explain how Groq works."}
+    ],
+    model="llama3-8b-8192", # Example model
+)
+
+print(chat_completion.choices[0].message.content)
