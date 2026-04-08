@@ -1,6 +1,7 @@
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 from bot.bot import get_response
@@ -9,9 +10,7 @@ from utils.chats import load_data, save_data
 load_dotenv()  # Load .env file
 
 TOKEN = os.getenv("BOT_TOKEN")  # Load from .env
-import os
-
-WEBHOOK_URL = os.environ.get("WEBHOOK_URL") or "http://localhost:10000"
+WEBHOOK_URL = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
 PORT = int(os.getenv("PORT", "10000"))
 
 # Load JSON once
@@ -70,15 +69,32 @@ def build_app():
     return app
 
 
+def _build_webhook_url(base_url: str, token: str) -> str:
+    # Accept hostnames without scheme and normalize to HTTPS.
+    normalized = base_url.strip()
+    if "//" not in normalized:
+        normalized = f"https://{normalized}"
+
+    parsed = urlparse(normalized)
+    if parsed.scheme != "https" or not parsed.netloc:
+        raise ValueError(
+            "Webhook URL must be a public HTTPS URL. "
+            "Set WEBHOOK_URL like https://your-app.onrender.com"
+        )
+
+    base = f"https://{parsed.netloc}{parsed.path}".rstrip("/")
+    return f"{base}/{token}"
+
+
 def main():
     if not TOKEN:
         raise ValueError("BOT_TOKEN is missing in .env")
 
     if not WEBHOOK_URL:
-        raise ValueError("WEBHOOK_URL or RENDER_EXTERNAL_URL is missing in .env")
+        raise ValueError("WEBHOOK_URL or RENDER_EXTERNAL_URL is required")
 
     app = build_app()
-    webhook_full_url = f"{WEBHOOK_URL.rstrip('/')}/{TOKEN}"
+    webhook_full_url = _build_webhook_url(WEBHOOK_URL, TOKEN)
 
     app.run_webhook(
         listen="0.0.0.0",
