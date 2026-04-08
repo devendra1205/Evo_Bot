@@ -9,7 +9,9 @@ from utils.chats import load_data, save_data
 load_dotenv()  # Load .env file
 
 TOKEN = os.getenv("BOT_TOKEN")  # Load from .env
-WEBHOOK_URL = os.getenv("WEBHOOK_URL") or os.getenv("RENDER_EXTERNAL_URL")
+import os
+
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL") or "http://localhost:10000"
 PORT = int(os.getenv("PORT", "10000"))
 
 # Load JSON once
